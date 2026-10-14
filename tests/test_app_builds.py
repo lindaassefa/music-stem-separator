@@ -18,7 +18,8 @@ def test_separating_message_does_not_claim_a_finished_time():
 def test_dashboard_names_the_product_and_the_pretrained_model():
     demo = app.build_demo()
 
-    assert demo.title == "STEM — Neural Audio Intelligence"
+    assert demo.title == "Music Stem Separator"
+    assert "Music Stem Separator" in app.HEADER
     assert "Neural Audio Intelligence" in app.HEADER
     assert "htdemucs" in app.FOOTER
     assert "not a source-separation accuracy metric" in app.ANALYSIS_NOTE

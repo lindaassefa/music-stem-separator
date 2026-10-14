@@ -26,7 +26,7 @@ body,
   font-family: "Iowan Old Style", Palatino, "Palatino Linotype", Georgia, serif !important;
   font-weight: 500 !important;
   font-size: 3rem !important;
-  letter-spacing: 0.34em !important;
+  letter-spacing: 0.06em !important;
   line-height: 1 !important;
   margin: 0 0 0.35rem 0 !important;
   color: #f7f1ea !important;
@@ -103,6 +103,6 @@ body,
 
   .masthead h1 {
     font-size: 2.1rem !important;
-    letter-spacing: 0.18em !important;
+    letter-spacing: 0.04em !important;
   }
 }

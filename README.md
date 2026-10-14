@@ -1,6 +1,6 @@
-# STEM — Intelligent Music Separation
+# Music Stem Separator
 
-STEM separates a mixed song into four stems with a neural network:
+Music Stem Separator splits a mixed song into four stems with a neural network:
 
 - vocals
 - drums

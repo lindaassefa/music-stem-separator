@@ -26,7 +26,7 @@ LABELS = {
 }
 
 HEADER = """
-# STEM
+# Music Stem Separator
 
 Neural Audio Intelligence
 
@@ -163,7 +163,7 @@ def dashboard_theme() -> gr.themes.Base:
 
 def build_demo() -> gr.Blocks:
     benchmark_text, benchmark_chart = load_saved_benchmark()
-    with gr.Blocks(title="STEM — Neural Audio Intelligence", fill_width=True) as demo:
+    with gr.Blocks(title="Music Stem Separator", fill_width=True) as demo:
         gr.Markdown(HEADER, elem_classes=["masthead"])
         with gr.Row():
             with gr.Column(scale=3):
