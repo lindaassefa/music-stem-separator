@@ -1,0 +1,25 @@
+# Direct dependencies for the STEM separation app.
+# demucs==4.0.1 is installed separately with --no-deps. Its published
+# requirement torchaudio<2.1 conflicts with the PyTorch 2.4.1 pin below.
+# PyTorch 2.5 and later disable MPS on macOS 12, which is this machine's OS.
+
+torch==2.4.1
+torchaudio==2.4.1
+
+# Demucs imports these when the pretrained model runs.
+dora-search==0.1.13
+einops==0.8.2
+julius==0.2.8
+lameenc==1.8.4
+openunmix==1.2.1
+PyYAML==6.0.3
+tqdm==4.70.1
+
+# Audio I/O and the interface. Versions are the ones installed and tested.
+numpy==2.5.4
+soundfile==0.14.0
+miniaudio==1.71
+librosa==1.0.0
+matplotlib==3.11.2
+gradio==6.30.0
+pytest==9.1.1

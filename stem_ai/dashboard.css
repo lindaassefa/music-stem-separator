@@ -1,0 +1,108 @@
+/* Editorial dashboard. Scoped to the Gradio page, not a separate frontend. */
+
+body,
+.gradio-container {
+  background: #0e0d0c !important;
+  color: #f4efe8 !important;
+}
+
+.gradio-container {
+  max-width: 1120px !important;
+  margin: 0 auto !important;
+  padding: 28px 22px 48px !important;
+  font-family: "Avenir Next", "Segoe UI", sans-serif !important;
+}
+
+.gradio-container .prose,
+.gradio-container .prose p,
+.gradio-container .prose li,
+.gradio-container label,
+.gradio-container .label-wrap,
+.gradio-container span {
+  color: #f4efe8;
+}
+
+.masthead h1 {
+  font-family: "Iowan Old Style", Palatino, "Palatino Linotype", Georgia, serif !important;
+  font-weight: 500 !important;
+  font-size: 3rem !important;
+  letter-spacing: 0.34em !important;
+  line-height: 1 !important;
+  margin: 0 0 0.35rem 0 !important;
+  color: #f7f1ea !important;
+}
+
+.masthead p:first-of-type {
+  font-family: "Iowan Old Style", Palatino, Georgia, serif !important;
+  letter-spacing: 0.16em !important;
+  text-transform: uppercase !important;
+  font-size: 0.92rem !important;
+  color: #c9b8ae !important;
+  margin-top: 0 !important;
+}
+
+.masthead {
+  border-bottom: 1px solid #7c2a36;
+  padding-bottom: 1.1rem;
+  margin-bottom: 1.4rem;
+}
+
+.section-label h2,
+.section-label h3 {
+  font-family: "Iowan Old Style", Palatino, Georgia, serif !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.08em !important;
+  color: #f7f1ea !important;
+  margin-bottom: 0.25rem !important;
+}
+
+.section-label p,
+.fine-print p {
+  color: #c9b8ae !important;
+  font-size: 0.95rem !important;
+}
+
+.stem-panel {
+  border: 1px solid #3a332f !important;
+  border-top: 2px solid #7c2a36 !important;
+  background: #1a1715 !important;
+  padding: 8px 8px 14px !important;
+  margin-bottom: 8px;
+}
+
+.stem-panel h3 {
+  font-family: "Iowan Old Style", Palatino, Georgia, serif !important;
+  letter-spacing: 0.14em !important;
+  text-transform: uppercase !important;
+  font-size: 0.95rem !important;
+  color: #f7f1ea !important;
+  margin: 8px 10px 0 !important;
+}
+
+.gradio-container button.primary,
+.gradio-container .primary {
+  letter-spacing: 0.14em !important;
+  text-transform: uppercase !important;
+  font-weight: 600 !important;
+}
+
+.fine-print {
+  margin-top: 2rem;
+  border-top: 1px solid #3a332f;
+  padding-top: 0.8rem;
+}
+
+@media (max-width: 860px) {
+  .gradio-container {
+    padding: 18px 12px 36px !important;
+  }
+
+  .gradio-container .row {
+    flex-direction: column !important;
+  }
+
+  .masthead h1 {
+    font-size: 2.1rem !important;
+    letter-spacing: 0.18em !important;
+  }
+}

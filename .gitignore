@@ -1,0 +1,33 @@
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# Uploaded audio and generated stems
+uploads/
+outputs/
+separated/
+.gradio/
+flagged/
+
+# Model weights and local caches
+models/
+weights/
+.cache/
+*.pt
+*.pth
+*.ckpt
+*.th
+
+# OS files
+.DS_Store
