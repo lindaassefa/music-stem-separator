@@ -13,10 +13,20 @@ import gradio as gr
 
 from stem_ai.analysis import AnalysisError
 from stem_ai.benchmark_metrics import load_saved_benchmark
+from stem_ai.deployment import (
+    SHARE_OUTPUT_MAX_AGE_SECONDS,
+    bind_zero_gpu,
+    blocked_paths_for_share,
+    cleanup_old_outputs,
+    on_huggingface_space,
+    prepare_public_share_dirs,
+    public_share_enabled,
+    upload_is_contained,
+)
 from stem_ai.device import DeviceError
 from stem_ai.export import STEM_NAMES, OutputIntegrityError
-from stem_ai.separation import SeparationError, SeparationResult, format_report, separate
-from stem_ai.validation import AudioValidationError
+from stem_ai.separation import SeparationError, load_htdemucs, separate
+from stem_ai.validation import AudioValidationError, limits_text, load_audio
 
 LABELS = {
     "vocals": "Vocals",
@@ -26,310 +36,312 @@ LABELS = {
 }
 
 HEADER = """
-# Music Stem Separator
+# MUSIC STEM SEPARATOR
 
-Neural Audio Intelligence
+## Pull a song apart.
 
-A mix goes in. Four stems come out: vocals, drums, bass, and other. The split uses Meta's published Hybrid Transformer Demucs weights, `htdemucs`. This application runs that model. It does not train it.
+Separate vocals, drums, bass, and everything else.
 """
 
-UPLOAD_NOTE = """
-WAV or MP3. Empty files, silence, and unreadable audio stop here, before the weights load.
-"""
-
-SEPARATING = (
-    "Separating this mix with pretrained htdemucs. "
-    "The clock for inference starts after the weights are on the processor. "
-    "CPU can take longer than the clip."
-)
-
-ANALYSIS_NOTE = """
-### Audio analysis
-
-RMS, spectral centroid, spectral bandwidth, and zero-crossing rate are librosa and NumPy measurements on the mono average of each stem. They are not neural-network outputs.
-
-Each spectrogram is a log-frequency view, in decibels relative to that image's own peak, so the colors do not rank loudness across stems. RMS does.
-
-Reconstruction RMSE is the difference between the mixture Demucs received and the sum of the four stems, taken before 16-bit clipping. It is not a source-separation accuracy metric. A small residual only means the stems add back toward the mix.
-"""
+PREPARING = "Preparing audio"
 
 BENCHMARK_NOTE = """
 ### Benchmark
 
-The table and chart below are the newest file in `outputs/benchmarks`. Separating a song on this page does not rerun that comparison. CPU is included only when that benchmark actually ran it.
+Any table or chart below is a local Mac measurement of CPU and Apple MPS. It is not a measurement of this server, and separating audio here does not rerun that comparison. CPU is included only when that Mac benchmark actually ran it.
 """
 
 FOOTER = """
-Pretrained model: Hybrid Transformer Demucs (`htdemucs`), Meta Demucs. Rouard, Massa, and Défossez, ICASSP 2023. Weights are loaded for inference only.
+[Project source](https://github.com/lindaassefa/music-stem-separator)
 """
 
-INK = "#0e0d0c"
-CHARCOAL = "#1a1715"
-PANEL = "#241f1c"
-LINE = "#3a332f"
-IVORY = "#f4efe8"
-MUTED = "#c9b8ae"
-BURGUNDY = "#7c2a36"
-BURGUNDY_HOVER = "#9a3846"
+INK = "#10141E"
+SLATE = "#20283A"
+BLUE = "#526BFF"
+BLUE_HOVER = "#6A7EFF"
+LIME = "#D9FF66"
+WHITE = "#F5F5F0"
+MUTED = "#93A0B8"
+LINE = "#2C3548"
 
 
 def dashboard_theme() -> gr.themes.Base:
-    """Near-black field, charcoal panels, burgundy accent. Same in light and dark mode."""
+    """Ink field, slate cards, electric blue actions. Same in light and dark mode."""
 
+    sans = ["Avenir Next", "Helvetica Neue", "Segoe UI", "sans-serif"]
     return gr.themes.Base(
-        primary_hue="red",
-        secondary_hue="stone",
-        neutral_hue="stone",
-        font=["Avenir Next", "Segoe UI", "sans-serif"],
-        font_mono=["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+        primary_hue="blue",
+        secondary_hue="slate",
+        neutral_hue="slate",
+        font=sans,
+        font_mono=sans,
         radius_size="sm",
         text_size="md",
     ).set(
         body_background_fill=INK,
         body_background_fill_dark=INK,
-        body_text_color=IVORY,
-        body_text_color_dark=IVORY,
+        body_text_color=WHITE,
+        body_text_color_dark=WHITE,
         body_text_color_subdued=MUTED,
         body_text_color_subdued_dark=MUTED,
-        background_fill_primary=CHARCOAL,
-        background_fill_primary_dark=CHARCOAL,
-        background_fill_secondary=PANEL,
-        background_fill_secondary_dark=PANEL,
-        block_background_fill=CHARCOAL,
-        block_background_fill_dark=CHARCOAL,
-        block_border_color=LINE,
-        block_border_color_dark=LINE,
-        block_label_background_fill=PANEL,
-        block_label_background_fill_dark=PANEL,
-        block_label_text_color=IVORY,
-        block_label_text_color_dark=IVORY,
-        block_title_text_color=IVORY,
-        block_title_text_color_dark=IVORY,
+        background_fill_primary=INK,
+        background_fill_primary_dark=INK,
+        background_fill_secondary=SLATE,
+        background_fill_secondary_dark=SLATE,
+        block_background_fill=INK,
+        block_background_fill_dark=INK,
+        block_border_color="transparent",
+        block_border_color_dark="transparent",
+        block_label_background_fill="transparent",
+        block_label_background_fill_dark="transparent",
+        block_label_text_color=MUTED,
+        block_label_text_color_dark=MUTED,
+        block_title_text_color=WHITE,
+        block_title_text_color_dark=WHITE,
         block_info_text_color=MUTED,
         block_info_text_color_dark=MUTED,
         border_color_primary=LINE,
         border_color_primary_dark=LINE,
-        border_color_accent=BURGUNDY,
-        border_color_accent_dark=BURGUNDY,
-        color_accent=BURGUNDY,
-        color_accent_soft="#3a2226",
-        color_accent_soft_dark="#3a2226",
-        link_text_color="#e7c4c8",
-        link_text_color_dark="#e7c4c8",
-        button_primary_background_fill=BURGUNDY,
-        button_primary_background_fill_dark=BURGUNDY,
-        button_primary_background_fill_hover=BURGUNDY_HOVER,
-        button_primary_background_fill_hover_dark=BURGUNDY_HOVER,
-        button_primary_text_color=IVORY,
-        button_primary_text_color_dark=IVORY,
-        button_primary_border_color=BURGUNDY,
-        button_primary_border_color_dark=BURGUNDY,
-        button_secondary_background_fill=PANEL,
-        button_secondary_background_fill_dark=PANEL,
-        button_secondary_background_fill_hover="#2e2926",
-        button_secondary_background_fill_hover_dark="#2e2926",
-        button_secondary_text_color=IVORY,
-        button_secondary_text_color_dark=IVORY,
-        button_secondary_border_color=LINE,
-        button_secondary_border_color_dark=LINE,
-        input_background_fill="#141210",
-        input_background_fill_dark="#141210",
+        border_color_accent=BLUE,
+        border_color_accent_dark=BLUE,
+        color_accent=BLUE,
+        color_accent_soft=SLATE,
+        color_accent_soft_dark=SLATE,
+        link_text_color=WHITE,
+        link_text_color_dark=WHITE,
+        button_primary_background_fill=BLUE,
+        button_primary_background_fill_dark=BLUE,
+        button_primary_background_fill_hover=BLUE_HOVER,
+        button_primary_background_fill_hover_dark=BLUE_HOVER,
+        button_primary_text_color=INK,
+        button_primary_text_color_dark=INK,
+        button_primary_border_color=BLUE,
+        button_primary_border_color_dark=BLUE,
+        button_secondary_background_fill=SLATE,
+        button_secondary_background_fill_dark=SLATE,
+        button_secondary_background_fill_hover="#2A3348",
+        button_secondary_background_fill_hover_dark="#2A3348",
+        button_secondary_text_color=WHITE,
+        button_secondary_text_color_dark=WHITE,
+        button_secondary_border_color="transparent",
+        button_secondary_border_color_dark="transparent",
+        input_background_fill=INK,
+        input_background_fill_dark=INK,
         input_border_color=LINE,
         input_border_color_dark=LINE,
         input_placeholder_color=MUTED,
         input_placeholder_color_dark=MUTED,
-        table_text_color=IVORY,
-        table_text_color_dark=IVORY,
-        table_border_color=LINE,
-        table_border_color_dark=LINE,
-        table_even_background_fill=CHARCOAL,
-        table_even_background_fill_dark=CHARCOAL,
-        table_odd_background_fill=PANEL,
-        table_odd_background_fill_dark=PANEL,
-        panel_background_fill=CHARCOAL,
-        panel_background_fill_dark=CHARCOAL,
-        panel_border_color=LINE,
-        panel_border_color_dark=LINE,
+        panel_background_fill=INK,
+        panel_background_fill_dark=INK,
+        panel_border_color="transparent",
+        panel_border_color_dark="transparent",
         block_shadow="none",
         block_shadow_dark="none",
         shadow_drop="none",
         shadow_drop_lg="none",
-        loader_color=BURGUNDY,
-        loader_color_dark=BURGUNDY,
-        code_background_fill="#141210",
-        code_background_fill_dark="#141210",
+        loader_color=LIME,
+        loader_color_dark=LIME,
+        code_background_fill=INK,
+        code_background_fill_dark=INK,
     )
 
 
+PUBLIC_BENCHMARK_MESSAGE = (
+    "This public link does not publish the saved Mac benchmark. "
+    "Those CPU and Apple MPS measurements stay on the local machine. "
+    "They are not a measurement of this shared server."
+)
+
+def saved_benchmark_for_display():
+    """Local Mac benchmark for a private session. The public link omits the file."""
+
+    if public_share_enabled():
+        return PUBLIC_BENCHMARK_MESSAGE, None
+    return load_saved_benchmark()
+
+
+def serving_policy(output_dir: Path) -> dict:
+    """File-serving and queue settings for this process.
+
+    A share link may serve only `output_dir`, which main() sets to a fresh
+    temporary folder. Credential directories and the project's saved outputs
+    are blocked. Private local launches do not open a tunnel.
+    """
+
+    sharing = public_share_enabled()
+    on_space = on_huggingface_space()
+    public = sharing or on_space
+    return {
+        "share": sharing,
+        "allowed_paths": [str(output_dir.resolve())],
+        "blocked_paths": blocked_paths_for_share() if sharing else [],
+        "max_file_size": "250mb" if (sharing or on_space) else None,
+        "max_size": 1 if public else None,
+        "run_history": False if sharing else None,
+        "enable_monitoring": False if sharing else None,
+        "mcp_server": False if sharing else None,
+    }
+
+
 def build_demo() -> gr.Blocks:
-    benchmark_text, benchmark_chart = load_saved_benchmark()
-    with gr.Blocks(title="Music Stem Separator", fill_width=True) as demo:
+    public = public_share_enabled() or on_huggingface_space()
+    cache_policy = (30, SHARE_OUTPUT_MAX_AGE_SECONDS) if public else None
+    with gr.Blocks(title="Music Stem Separator", fill_width=True, delete_cache=cache_policy) as demo:
         gr.Markdown(HEADER, elem_classes=["masthead"])
-        with gr.Row():
-            with gr.Column(scale=3):
-                upload = gr.File(
-                    label="Audio",
-                    file_types=[".wav", ".mp3"],
-                    type="filepath",
-                )
-            with gr.Column(scale=2):
-                gr.Markdown(UPLOAD_NOTE, elem_classes=["section-label"])
-                separate_button = gr.Button("Separate Audio", variant="primary", size="lg")
-        report = gr.Textbox(
-            label="This run",
-            lines=12,
-            interactive=False,
-            placeholder="Duration, device, inference time, and the reconstruction residual appear after a separation.",
-        )
-        gr.Markdown(
-            "### Stems\n\nPlayback and a WAV download sit with each stem. Waveforms and spectrograms fill in after a successful run. A missing file, silence, or a failed pass leaves these panels empty and writes the reason above.",
-            elem_classes=["section-label"],
-        )
-        panels = {}
-        with gr.Row():
-            for name in ("vocals", "drums"):
-                panels[name] = _stem_panel(name)
-        with gr.Row():
-            for name in ("bass", "other"):
-                panels[name] = _stem_panel(name)
-        players = [panels[name][0] for name in STEM_NAMES]
-        images = []
-        for name in STEM_NAMES:
-            images.extend(panels[name][1:])
-        gr.Markdown(ANALYSIS_NOTE, elem_classes=["section-label"])
-        table = gr.Dataframe(
-            headers=[
-                "Stem",
-                "RMS",
-                "Spectral centroid (Hz)",
-                "Spectral bandwidth (Hz)",
-                "Zero-crossing rate",
-            ],
-            datatype=["str", "number", "number", "number", "number"],
-            interactive=False,
-            label="Stem metrics",
-            wrap=True,
-        )
-        gr.Markdown(BENCHMARK_NOTE, elem_classes=["section-label"])
-        benchmark_summary = gr.Markdown(benchmark_text)
-        benchmark_image = gr.Image(
-            value=benchmark_chart,
-            label="Latency comparison",
-            type="filepath",
-            interactive=False,
-            sources=[],
-            buttons=["download", "fullscreen"],
-        )
-        refresh_benchmark = gr.Button("Reload saved benchmark", variant="secondary")
+        with gr.Column(elem_classes=["deck"]):
+            gr.Markdown(limits_text(), elem_classes=["limits"])
+            upload = gr.File(
+                label="Song",
+                show_label=False,
+                file_count="single",
+                file_types=[".wav", ".mp3"],
+                type="filepath",
+            )
+            duration = gr.Markdown("", elem_classes=["duration"])
+            separate_button = gr.Button("Separate Audio", variant="primary")
+            status = gr.Markdown("", elem_classes=["status"])
+        gr.Markdown("YOUR STEMS", elem_classes=["stems-heading"])
+        players = [_stem_player(name) for name in STEM_NAMES]
         gr.Markdown(FOOTER, elem_classes=["fine-print"])
+        upload.change(fn=describe_upload, inputs=upload, outputs=duration)
         separate_button.click(
-            fn=show_separating,
-            outputs=report,
+            fn=start_separation,
+            outputs=[separate_button, status, *players],
             concurrency_limit=1,
         ).then(
             fn=run_separation,
             inputs=upload,
-            outputs=players + [report, table, *images],
+            outputs=[*players, status],
             concurrency_limit=1,
-        )
-        refresh_benchmark.click(
-            fn=load_saved_benchmark,
-            outputs=[benchmark_summary, benchmark_image],
+        ).then(
+            fn=enable_separate,
+            outputs=separate_button,
         )
     return demo
 
 
 def show_separating() -> str:
-    """Shown while htdemucs is running. The measured times replace it."""
+    """Shown while the upload is checked, before the model runs."""
 
-    return SEPARATING
+    return PREPARING
+
+
+def start_separation():
+    """Block a second click and clear stems from the previous song."""
+
+    return (
+        gr.update(interactive=False),
+        show_separating(),
+        None,
+        None,
+        None,
+        None,
+    )
+
+
+def enable_separate():
+    return gr.update(interactive=True)
+
+
+def describe_upload(upload) -> str:
+    """Duration of the selected file, or the validation message if it cannot be read."""
+
+    if not upload:
+        return ""
+    try:
+        loaded = load_audio(_coerce_upload(upload))
+    except AudioValidationError as exc:
+        return str(exc)
+    whole = int(round(loaded.duration_seconds))
+    minutes, seconds = divmod(whole, 60)
+    return f"Duration {minutes}:{seconds:02d}"
+
+
+def _separate_checked(path: Path, loaded):
+    """Run pretrained htdemucs. On ZeroGPU this is the GPU-reserved call.
+
+    Plots and DSP measurements stay off this path. The model and the WAV
+    export are unchanged. `analyze=True` remains available to the tests.
+    """
+
+    return separate(path, analyze=False, loaded=loaded)
+
+
+separate_checked = bind_zero_gpu(_separate_checked)
 
 
 def run_separation(upload):
-    """Validate and separate one upload. Errors stay in the details box."""
+    """Validate and separate one upload. Returns the four WAV paths and a status.
+
+    This is one return, not a stream. The original working page filled the
+    players the same way. Validation happens before the ZeroGPU reservation,
+    so a bad upload does not hold a GPU. One separation runs at a time.
+    """
+
+    prepared = _prepare_upload(upload)
+    if prepared[0] is None:
+        return _idle(prepared[2])
+    path, loaded, _error = prepared
+    paths, error = _finish_separation(path, loaded)
+    if error:
+        return _idle(error)
+    return paths + ("",)
+
+
+def _prepare_upload(upload):
+    if public_share_enabled():
+        share_output = os.environ.get("STEM_OUTPUT_DIR")
+        if share_output:
+            cleanup_old_outputs(share_output, max_age_seconds=SHARE_OUTPUT_MAX_AGE_SECONDS)
+    elif on_huggingface_space():
+        cleanup_old_outputs(os.environ.get("STEM_OUTPUT_DIR", "outputs"))
 
     if upload is None:
-        return _idle("Upload a WAV or MP3 file.")
-
+        return None, None, "Upload a WAV or MP3 file."
     try:
-        result = separate(_coerce_upload(upload))
+        path = _coerce_upload(upload)
+        if public_share_enabled() and not upload_is_contained(path):
+            return None, None, "Upload a WAV or MP3 file."
+        loaded = load_audio(path)
     except AudioValidationError as exc:
-        return _idle(str(exc))
+        return None, None, str(exc)
+    return path, loaded, None
+
+
+def _finish_separation(path: Path, loaded):
+    try:
+        result = separate_checked(path, loaded)
     except (SeparationError, OutputIntegrityError, DeviceError, AnalysisError) as exc:
         logging.getLogger("stem_ai.app").exception("Separation did not finish")
-        return _idle(str(exc))
+        return None, str(exc)
     except Exception as exc:
         logging.getLogger("stem_ai.app").exception("Unexpected separation failure")
-        return _idle(f"Separation failed: {exc}")
-
+        return None, f"Separation failed: {exc}"
     paths = result.paths()
-    return (
-        tuple(str(paths[name]) for name in STEM_NAMES)
-        + (format_report(result), _measurement_rows(result))
-        + _figure_paths(result)
-    )
+    return tuple(str(paths[name]) for name in STEM_NAMES), None
 
 
 def _idle(message: str):
-    return (None, None, None, None, message, None, *([None] * (len(STEM_NAMES) * 2)))
+    return (None, None, None, None, message)
 
 
-def _measurement_rows(result: SeparationResult):
-    if not result.measurements:
-        return None
-    by_name = {item.stem: item for item in result.measurements}
-    return [
-        [
-            LABELS[name],
-            by_name[name].rms,
-            by_name[name].spectral_centroid_hz,
-            by_name[name].spectral_bandwidth_hz,
-            by_name[name].zero_crossing_rate,
-        ]
-        for name in STEM_NAMES
-    ]
-
-
-def _figure_paths(result: SeparationResult):
-    by_name = {item.stem: item for item in result.measurements}
-    paths = []
-    for name in STEM_NAMES:
-        item = by_name.get(name)
-        if item is None:
-            paths.extend([None, None])
-        else:
-            paths.extend([str(item.waveform_plot), str(item.spectrogram_plot)])
-    return tuple(paths)
-
-
-def _stem_panel(name: str):
-    with gr.Column(elem_classes=["stem-panel"]):
-        gr.Markdown(f"### {LABELS[name]}")
-        player = _player(name)
-        waveform = _figure(f"{LABELS[name]} waveform")
-        spectrogram = _figure(f"{LABELS[name]} spectrogram")
-    return player, waveform, spectrogram
-
-
-def _figure(label: str) -> gr.Image:
-    return gr.Image(
-        label=label,
-        type="filepath",
-        interactive=False,
-        sources=[],
-        buttons=["download", "fullscreen"],
-    )
-
-
-def _player(stem: str) -> gr.Audio:
-    # The download button serves the 16-bit WAV written by the pipeline.
-    return gr.Audio(
-        label=LABELS[stem],
-        type="filepath",
-        interactive=False,
-        editable=False,
-        buttons=["download"],
-    )
+def _stem_player(stem: str) -> gr.Audio:
+    # The built-in player supplies play, pause, seek, the waveform, and the WAV download.
+    with gr.Row(elem_classes=["stem-track"]):
+        gr.Markdown(LABELS[stem], elem_classes=["track-name"])
+        return gr.Audio(
+            label=f"{LABELS[stem]} WAV",
+            show_label=False,
+            type="filepath",
+            interactive=False,
+            editable=False,
+            buttons=["download"],
+            waveform_options=gr.WaveformOptions(
+                waveform_color=LIME,
+                waveform_progress_color=BLUE,
+            ),
+            elem_classes=["stem-player"],
+        )
 
 
 def _coerce_upload(upload) -> Path:
@@ -349,17 +361,31 @@ def main() -> None:
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
+    on_space = on_huggingface_space()
+    if public_share_enabled():
+        output_dir = prepare_public_share_dirs()
+    else:
+        output_dir = Path(os.environ.get("STEM_OUTPUT_DIR", "outputs")).resolve()
     demo = build_demo()
-    port = int(os.environ.get("STEM_PORT", "7860"))
-    output_dir = Path(os.environ.get("STEM_OUTPUT_DIR", "outputs")).resolve()
+    if on_space:
+        # ZeroGPU's CUDA emulation accepts this placement before any visitor
+        # request. The real GPU is held only inside the reserved call.
+        load_htdemucs().cuda()
+    port = int(os.environ.get("PORT" if on_space else "STEM_PORT", "7860"))
     css_path = Path(__file__).resolve().parent / "stem_ai" / "dashboard.css"
-    demo.queue(default_concurrency_limit=1)
+    policy = serving_policy(output_dir)
+    demo.queue(default_concurrency_limit=1, max_size=policy["max_size"])
     demo.launch(
-        server_name="127.0.0.1",
+        server_name="0.0.0.0" if on_space else "127.0.0.1",
         server_port=port,
         inbrowser=False,
-        share=False,
-        allowed_paths=[str(output_dir)],
+        share=policy["share"],
+        max_file_size=policy["max_file_size"],
+        allowed_paths=policy["allowed_paths"],
+        blocked_paths=policy["blocked_paths"],
+        run_history=policy["run_history"],
+        enable_monitoring=policy["enable_monitoring"],
+        mcp_server=policy["mcp_server"],
         theme=dashboard_theme(),
         css_paths=[css_path],
         footer_links=[],

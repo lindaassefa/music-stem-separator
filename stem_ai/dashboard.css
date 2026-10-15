@@ -1,108 +1,237 @@
-/* Editorial dashboard. Scoped to the Gradio page, not a separate frontend. */
+/* Music player page. Scoped to this Gradio app. */
 
 body,
 .gradio-container {
-  background: #0e0d0c !important;
-  color: #f4efe8 !important;
+  background: #10141e !important;
+  color: #f5f5f0 !important;
 }
 
 .gradio-container {
-  max-width: 1120px !important;
+  max-width: 880px !important;
   margin: 0 auto !important;
-  padding: 28px 22px 48px !important;
-  font-family: "Avenir Next", "Segoe UI", sans-serif !important;
+  padding: 36px 24px 56px !important;
+  font-family: "Avenir Next", "Helvetica Neue", "Segoe UI", sans-serif !important;
 }
 
 .gradio-container .prose,
 .gradio-container .prose p,
 .gradio-container .prose li,
 .gradio-container label,
-.gradio-container .label-wrap,
-.gradio-container span {
-  color: #f4efe8;
-}
-
-.masthead h1 {
-  font-family: "Iowan Old Style", Palatino, "Palatino Linotype", Georgia, serif !important;
-  font-weight: 500 !important;
-  font-size: 3rem !important;
-  letter-spacing: 0.06em !important;
-  line-height: 1 !important;
-  margin: 0 0 0.35rem 0 !important;
-  color: #f7f1ea !important;
-}
-
-.masthead p:first-of-type {
-  font-family: "Iowan Old Style", Palatino, Georgia, serif !important;
-  letter-spacing: 0.16em !important;
-  text-transform: uppercase !important;
-  font-size: 0.92rem !important;
-  color: #c9b8ae !important;
-  margin-top: 0 !important;
+.gradio-container button,
+.gradio-container input,
+.gradio-container textarea {
+  font-family: "Avenir Next", "Helvetica Neue", "Segoe UI", sans-serif;
 }
 
 .masthead {
-  border-bottom: 1px solid #7c2a36;
-  padding-bottom: 1.1rem;
-  margin-bottom: 1.4rem;
+  margin-bottom: 1.25rem;
 }
 
-.section-label h2,
-.section-label h3 {
-  font-family: "Iowan Old Style", Palatino, Georgia, serif !important;
-  font-weight: 500 !important;
-  letter-spacing: 0.08em !important;
-  color: #f7f1ea !important;
-  margin-bottom: 0.25rem !important;
-}
-
-.section-label p,
-.fine-print p {
-  color: #c9b8ae !important;
-  font-size: 0.95rem !important;
-}
-
-.stem-panel {
-  border: 1px solid #3a332f !important;
-  border-top: 2px solid #7c2a36 !important;
-  background: #1a1715 !important;
-  padding: 8px 8px 14px !important;
-  margin-bottom: 8px;
-}
-
-.stem-panel h3 {
-  font-family: "Iowan Old Style", Palatino, Georgia, serif !important;
-  letter-spacing: 0.14em !important;
-  text-transform: uppercase !important;
-  font-size: 0.95rem !important;
-  color: #f7f1ea !important;
-  margin: 8px 10px 0 !important;
-}
-
-.gradio-container button.primary,
-.gradio-container .primary {
-  letter-spacing: 0.14em !important;
-  text-transform: uppercase !important;
+.masthead h1 {
+  font-size: 0.82rem !important;
   font-weight: 600 !important;
+  letter-spacing: 0.11em !important;
+  line-height: 1.2 !important;
+  margin: 0 0 0.85rem 0 !important;
+  color: #93a0b8 !important;
+}
+
+.masthead h2 {
+  font-size: 1.7rem !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.02em !important;
+  line-height: 1.15 !important;
+  margin: 0 0 0.4rem 0 !important;
+  color: #f5f5f0 !important;
+}
+
+.masthead h2::after {
+  content: "";
+  display: block;
+  width: 2.25rem;
+  height: 3px;
+  margin-top: 0.7rem;
+  background: #d9ff66;
+}
+
+.masthead p {
+  max-width: 28rem;
+  margin: 0.85rem 0 0 0 !important;
+  color: #93a0b8 !important;
+  font-size: 1rem !important;
+  line-height: 1.4 !important;
+}
+
+.deck {
+  background: #20283a !important;
+  padding: 1.1rem 1.1rem 0.85rem !important;
+  margin: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  gap: 0.35rem !important;
+}
+
+.deck .upload-container {
+  height: 7.25rem !important;
+  min-height: 7.25rem !important;
+  max-height: 7.25rem !important;
+}
+
+.limits p {
+  color: #93a0b8 !important;
+  font-size: 0.92rem !important;
+  letter-spacing: 0.01em;
+  margin: 0 0 0.65rem 0 !important;
+}
+
+.duration p {
+  color: #f5f5f0 !important;
+  font-size: 0.92rem !important;
+  letter-spacing: 0.04em;
+  margin: 0.15rem 0 0.55rem 0 !important;
+}
+
+.deck button.primary {
+  width: 100%;
+  min-height: 2.85rem;
+  font-size: 1.2rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.01em !important;
+  text-transform: none !important;
+  color: #10141e !important;
+  background: #526bff !important;
+  border: none !important;
+  border-radius: 2px !important;
+}
+
+.deck button.primary:hover {
+  background: #6a7eff !important;
+  color: #10141e !important;
+}
+
+.deck button.primary:disabled {
+  background: #20283a !important;
+  color: #93a0b8 !important;
+  border: 1px solid #2c3548 !important;
+  opacity: 1 !important;
+}
+
+.gradio-container button:focus-visible,
+.gradio-container a:focus-visible,
+.gradio-container input:focus-visible {
+  outline: 2px solid #d9ff66 !important;
+  outline-offset: 2px !important;
+}
+
+.status p {
+  margin: 0.75rem 0 0.15rem 0 !important;
+  padding-left: 0.65rem;
+  border-left: 2px solid #d9ff66;
+  color: #f5f5f0 !important;
+  font-size: 0.95rem !important;
+}
+
+.stems {
+  margin-top: 1.35rem !important;
+  gap: 0.55rem !important;
+}
+
+.stems-heading p {
+  margin: 0 0 0.35rem 0 !important;
+  color: #93a0b8 !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.16em !important;
+}
+
+.stem-track {
+  align-items: center !important;
+  gap: 0.75rem !important;
+  background: #20283a !important;
+  padding: 0.3rem 0.65rem !important;
+  margin-bottom: 0.4rem !important;
+  flex-wrap: nowrap !important;
+}
+
+.stem-track .track-name {
+  flex: 0 0 4.6rem !important;
+  min-width: 4.6rem !important;
+}
+
+.stem-track .stem-player {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+}
+
+.stem-row {
+  gap: 0.7rem !important;
+}
+
+.stem-card {
+  background: #20283a !important;
+  padding: 0.7rem 0.75rem 0.45rem !important;
+  border: none !important;
+  min-width: 0 !important;
+}
+
+.stem-track .track-name p,
+.track-name p {
+  margin: 0 !important;
+  color: #f5f5f0 !important;
+  font-size: 0.95rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.04em !important;
+}
+
+.stem-player,
+.stem-player .audio {
+  min-height: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
 .fine-print {
-  margin-top: 2rem;
-  border-top: 1px solid #3a332f;
+  margin-top: 1.8rem;
   padding-top: 0.8rem;
 }
 
-@media (max-width: 860px) {
-  .gradio-container {
-    padding: 18px 12px 36px !important;
+.fine-print p,
+.fine-print a {
+  color: #93a0b8 !important;
+  font-size: 0.82rem !important;
+}
+
+.fine-print a {
+  text-decoration: underline;
+  text-underline-offset: 0.16em;
+}
+
+.fine-print a:hover {
+  color: #f5f5f0 !important;
+}
+
+footer,
+.built-with {
+  display: none !important;
+}
+
+@media (max-width: 720px) {
+  .masthead h2 {
+    font-size: 1.4rem !important;
   }
 
-  .gradio-container .row {
+  .stem-track {
+    flex-wrap: wrap !important;
+  }
+
+  .stem-row {
     flex-direction: column !important;
   }
 
-  .masthead h1 {
-    font-size: 2.1rem !important;
-    letter-spacing: 0.04em !important;
+  .stem-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 1 1 auto !important;
   }
 }

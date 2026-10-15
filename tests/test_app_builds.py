@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
+import numpy as np
+import soundfile as sf
+
 import app
 from stem_ai.analysis import StemMeasurement
 from stem_ai.export import STEM_NAMES
@@ -11,7 +16,7 @@ from stem_ai.separation import SeparationResult
 def test_separating_message_does_not_claim_a_finished_time():
     message = app.show_separating()
 
-    assert "pretrained htdemucs" in message
+    assert message == "Preparing audio"
     assert "seconds" not in message
 
 
@@ -19,10 +24,31 @@ def test_dashboard_names_the_product_and_the_pretrained_model():
     demo = app.build_demo()
 
     assert demo.title == "Music Stem Separator"
-    assert "Music Stem Separator" in app.HEADER
-    assert "Neural Audio Intelligence" in app.HEADER
-    assert "htdemucs" in app.FOOTER
-    assert "not a source-separation accuracy metric" in app.ANALYSIS_NOTE
+    assert "MUSIC STEM SEPARATOR" in app.HEADER
+    assert "Pull a song apart." in app.HEADER
+    assert "Separate vocals, drums, bass, and everything else." in app.HEADER
+    readme = Path(__file__).resolve().parents[1].joinpath("README.md").read_text()
+    assert "Hybrid Transformer Demucs" not in app.FOOTER
+    assert "Hybrid Transformer Demucs" in readme
+    assert "github.com/lindaassefa/music-stem-separator" in app.FOOTER
+    texts = []
+    for block in demo.blocks.values():
+        for attr in ("label", "value"):
+            item = getattr(block, attr, None)
+            if isinstance(item, str):
+                texts.append(item)
+    blob = "\n".join(texts).lower()
+    assert "Separate Audio" in texts
+    for banned in (
+        "benchmark",
+        "rmse",
+        "spectral",
+        "inference",
+        "real-time",
+        "centroid",
+        "zero-crossing",
+    ):
+        assert banned not in blob
 
 
 def test_interface_builds_without_loading_the_model(monkeypatch):
@@ -45,13 +71,15 @@ def test_missing_upload_returns_a_message_and_no_audio():
     assert result[2] is None
     assert result[3] is None
     assert "Upload a WAV or MP3" in result[4]
-    assert result[5] is None
-    assert all(item is None for item in result[6:])
-    assert len(result) == 14
+    assert len(result) == 5
 
 
 def test_dashboard_receives_measured_stem_values(tmp_path, monkeypatch):
-    def fake_separate(_path, output_dir=None):
+    seen = {}
+
+    def fake_separate(_path, output_dir=None, *, analyze=True, loaded=None):
+        seen["analyze"] = analyze
+        seen["loaded"] = loaded
         measurements = tuple(
             StemMeasurement(
                 stem=name,
@@ -81,13 +109,16 @@ def test_dashboard_receives_measured_stem_values(tmp_path, monkeypatch):
         )
 
     monkeypatch.setattr(app, "separate", fake_separate)
-    vocals, _drums, _bass, _other, report, table, *figures = app.run_separation("song.wav")
+    upload = tmp_path / "song.wav"
+    tone = (0.2 * np.sin(2 * np.pi * 440 * np.arange(8000) / 8000)).astype(np.float32)
+    sf.write(upload, tone, 8000)
+    vocals, drums, bass, other, status = app.run_separation(upload)
 
     assert vocals.endswith("vocals.wav")
-    assert "Inference time / audio duration: 0.500" in report
-    assert "Reconstruction RMSE: 1.250000e-01" in report
-    assert table[0][0] == "Vocals"
-    assert table[0][1] == 0.1
-    assert figures[0].endswith("vocals_waveform.png")
-    assert figures[1].endswith("vocals_spectrogram.png")
-    assert len(figures) == 8
+    assert drums.endswith("drums.wav")
+    assert bass.endswith("bass.wav")
+    assert other.endswith("other.wav")
+    assert status == ""
+    assert "rmse" not in status.lower()
+    assert seen["analyze"] is False
+    assert seen["loaded"] is not None

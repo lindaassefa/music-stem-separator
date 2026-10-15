@@ -255,7 +255,10 @@ def _cell(value) -> str:
 def format_saved_benchmark(payload: dict) -> str:
     """Render a benchmark file that already exists. Missing numbers stay missing."""
 
-    lines = ["Saved measurements from one benchmark file. Nothing here is estimated."]
+    lines = [
+        "Saved measurements from one benchmark file. Nothing here is estimated.",
+        "Collected on a local Mac, on CPU and Apple MPS. These are not Hugging Face server benchmarks.",
+    ]
     audio = payload.get("audio_path") or "unknown file"
     lines.append(f"Audio: {audio}")
     duration = payload.get("audio_duration_seconds")
@@ -320,8 +323,8 @@ def load_saved_benchmark(directory: str | Path = "outputs/benchmarks") -> tuple[
     if not files:
         return (
             "No saved benchmark is in this folder yet. "
-            "Run `python -m stem_ai.benchmark` on a local audio file when you want CPU and MPS timings. "
-            "This panel does not estimate them.",
+            "Numbers appear here only after a benchmark is run on a local Mac. "
+            "They are not Hugging Face server measurements, and this panel does not estimate them.",
             None,
         )
     path = files[-1]

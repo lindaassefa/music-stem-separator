@@ -6,6 +6,15 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+from stem_ai.deployment import (
+    PUBLIC_MAX_DURATION_SECONDS,
+    PUBLIC_MAX_FILE_BYTES,
+    SHARE_MAX_DURATION_SECONDS,
+    SHARE_MAX_FILE_BYTES,
+    on_huggingface_space,
+    public_share_enabled,
+)
+
 import numpy as np
 import soundfile as sf
 
@@ -38,6 +47,29 @@ class LoadedAudio:
         return int(self.samples.shape[1])
 
 
+def _max_file_bytes() -> int:
+    if public_share_enabled():
+        return SHARE_MAX_FILE_BYTES
+    if on_huggingface_space():
+        return PUBLIC_MAX_FILE_BYTES
+    return MAX_FILE_BYTES
+
+
+def limits_text() -> str:
+    """The duration and size cap currently in force, for the upload note."""
+
+    seconds = max_duration_seconds()
+    if seconds >= 60 and abs(seconds - round(seconds / 60) * 60) < 0.05:
+        duration = f"{int(round(seconds / 60))} minutes"
+    else:
+        duration = f"{seconds:.0f} seconds"
+    megabytes = max(1, _max_file_bytes() // (1024 * 1024))
+    return (
+        f"WAV or MP3. Up to {duration} and {megabytes} MB. "
+        "One song is separated at a time."
+    )
+
+
 def max_duration_seconds() -> float:
     raw = os.environ.get("STEM_MAX_DURATION_SEC", str(DEFAULT_MAX_DURATION_SECONDS))
     try:
@@ -48,6 +80,10 @@ def max_duration_seconds() -> float:
         raise AudioValidationError(
             "STEM_MAX_DURATION_SEC must be longer than the minimum audio length."
         )
+    if public_share_enabled():
+        return min(value, SHARE_MAX_DURATION_SECONDS)
+    if on_huggingface_space():
+        return min(value, PUBLIC_MAX_DURATION_SECONDS)
     return value
 
 
@@ -63,8 +99,11 @@ def load_audio(path: str | Path) -> LoadedAudio:
     size = source.stat().st_size
     if size == 0:
         raise AudioValidationError("The uploaded file is empty.")
-    if size > MAX_FILE_BYTES:
-        raise AudioValidationError("The uploaded file is larger than 250 MB.")
+    limit = _max_file_bytes()
+    if size > limit:
+        raise AudioValidationError(
+            f"The uploaded file is larger than {max(1, limit // (1024 * 1024))} MB."
+        )
 
     audio_format = _confirmed_format(source)
     if audio_format == "wav":

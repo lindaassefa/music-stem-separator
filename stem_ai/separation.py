@@ -102,7 +102,13 @@ def format_report(result: SeparationResult) -> str:
     return "\n".join(lines)
 
 
-def separate(path: str | Path, output_dir: str | Path | None = None) -> SeparationResult:
+def separate(
+    path: str | Path,
+    output_dir: str | Path | None = None,
+    *,
+    analyze: bool = True,
+    loaded: LoadedAudio | None = None,
+) -> SeparationResult:
     """Separate one song with pretrained htdemucs.
 
     Validation happens before the model is loaded, so a bad upload does not
@@ -115,7 +121,10 @@ def separate(path: str | Path, output_dir: str | Path | None = None) -> Separati
     so ffmpeg is not required.
     """
 
-    loaded = load_audio(path)
+    decode_started = time.perf_counter()
+    if loaded is None:
+        loaded = load_audio(path)
+    decode_seconds = time.perf_counter() - decode_started
     destination = Path(output_dir) if output_dir is not None else Path(
         os.environ.get("STEM_OUTPUT_DIR", "outputs")
     )
@@ -125,7 +134,9 @@ def separate(path: str | Path, output_dir: str | Path | None = None) -> Separati
     with _LOCK:
         requested = select_device()
         try:
-            model, separated, inference_seconds, waveform = _separate_loaded(loaded, requested)
+            model, separated, inference_seconds, waveform, stage_seconds = _separate_loaded(
+                loaded, requested
+            )
             device = requested
         except Exception as exc:
             if requested == "cpu" or isinstance(exc, (SeparationError, OutputIntegrityError, DeviceError)):
@@ -140,7 +151,9 @@ def separate(path: str | Path, output_dir: str | Path | None = None) -> Separati
                 exc_info=True,
             )
             try:
-                model, separated, inference_seconds, waveform = _separate_loaded(loaded, "cpu")
+                model, separated, inference_seconds, waveform, stage_seconds = _separate_loaded(
+                    loaded, "cpu"
+                )
             except Exception as cpu_exc:
                 raise SeparationError(
                     "Demucs inference failed on "
@@ -154,7 +167,10 @@ def separate(path: str | Path, output_dir: str | Path | None = None) -> Separati
         validate_stem_arrays(frames, sample_rate, expected_frames)
         _check_duration(loaded.duration_seconds, expected_frames, sample_rate)
         mixture = tensor_to_frames(waveform)
+        check_started = time.perf_counter()
         residual = reconstruction_error(mixture, frames)
+        stage_seconds["reconstruction_seconds"] = time.perf_counter() - check_started
+        write_started = time.perf_counter()
         try:
             written = write_stem_wavs(frames, sample_rate, run_dir)
             verify_written_wavs(written, sample_rate, expected_frames)
@@ -162,13 +178,27 @@ def separate(path: str | Path, output_dir: str | Path | None = None) -> Separati
             raise
         except OSError as exc:
             raise SeparationError(f"Could not write stem WAV files: {exc}") from exc
-        try:
-            measurements = measure_stems(frames, sample_rate, run_dir)
-            analysis_error = None
-        except AnalysisError as exc:
-            logger.exception("Stem measurement failed after separation")
+        stage_seconds["wav_write_seconds"] = time.perf_counter() - write_started
+        analysis_started = time.perf_counter()
+        if analyze:
+            try:
+                measurements = measure_stems(frames, sample_rate, run_dir)
+                analysis_error = None
+            except AnalysisError as exc:
+                logger.exception("Stem measurement failed after separation")
+                measurements = ()
+                analysis_error = str(exc)
+        else:
             measurements = ()
-            analysis_error = str(exc)
+            analysis_error = None
+        stage_seconds["analysis_seconds"] = time.perf_counter() - analysis_started
+        stage_seconds["decode_seconds"] = decode_seconds
+        logger.info(
+            "separation stages device=%s audio=%.2fs %s",
+            device,
+            loaded.duration_seconds,
+            " ".join(f"{name}={seconds:.3f}s" for name, seconds in stage_seconds.items()),
+        )
 
     return SeparationResult(
         vocals=written["vocals"],
@@ -191,13 +221,35 @@ def separate(path: str | Path, output_dir: str | Path | None = None) -> Separati
 def _separate_loaded(loaded: LoadedAudio, device: str):
     """Move htdemucs onto `device`, then time only the apply_model call."""
 
+    load_started = time.perf_counter()
     model = load_htdemucs()
+    model_load_seconds = time.perf_counter() - load_started
     # Weight loading happens in load_htdemucs. Moving the module is also kept
     # outside the timer so the reported time is the separation call itself.
-    model.to(device)
+    # A second request leaves the weights where they already are.
+    move_started = time.perf_counter()
+    if _parameter_device(model) != device:
+        model.to(device)
+    device_move_seconds = time.perf_counter() - move_started
+    prepare_started = time.perf_counter()
     waveform = _prepare_mixture(loaded, model)
+    resample_seconds = time.perf_counter() - prepare_started
     separated, inference_seconds = _infer(model, waveform, device)
-    return model, separated, inference_seconds, waveform
+    return model, separated, inference_seconds, waveform, {
+        "model_load_seconds": model_load_seconds,
+        "device_move_seconds": device_move_seconds,
+        "resample_seconds": resample_seconds,
+        "inference_seconds": inference_seconds,
+    }
+
+
+def _parameter_device(model) -> str:
+    """Device type of the loaded weights, such as cpu, mps, or cuda."""
+
+    try:
+        return next(model.parameters()).device.type
+    except StopIteration:
+        return ""
 
 
 def load_htdemucs():
