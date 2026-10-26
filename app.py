@@ -26,6 +26,7 @@ from stem_ai.deployment import (
 from stem_ai.device import DeviceError
 from stem_ai.export import STEM_NAMES, OutputIntegrityError
 from stem_ai.separation import SeparationError, load_htdemucs, separate
+from stem_ai.model_config import model_name_for_mode
 from stem_ai.validation import AudioValidationError, limits_text, load_audio
 
 LABELS = {
@@ -198,6 +199,12 @@ def build_demo() -> gr.Blocks:
                 type="filepath",
             )
             duration = gr.Markdown("", elem_classes=["duration"])
+            model_mode = gr.Radio(
+                choices=["Fast", "High Quality"],
+                value="Fast",
+                label="Separation Quality",
+                info="Fast uses HTDemucs. High Quality uses fine-tuned HTDemucs.",
+            )
             separate_button = gr.Button("Separate Audio", variant="primary")
             status = gr.Markdown("", elem_classes=["status"])
         gr.Markdown("YOUR STEMS", elem_classes=["stems-heading"])
@@ -210,7 +217,7 @@ def build_demo() -> gr.Blocks:
             concurrency_limit=1,
         ).then(
             fn=run_separation,
-            inputs=upload,
+            inputs=[upload, model_mode],
             outputs=[*players, status],
             concurrency_limit=1,
         ).then(
@@ -257,20 +264,25 @@ def describe_upload(upload) -> str:
     return f"Duration {minutes}:{seconds:02d}"
 
 
-def _separate_checked(path: Path, loaded):
+def _separate_checked(path: Path, loaded, model_name: str = "htdemucs"):
     """Run pretrained htdemucs. On ZeroGPU this is the GPU-reserved call.
 
     Plots and DSP measurements stay off this path. The model and the WAV
     export are unchanged. `analyze=True` remains available to the tests.
     """
 
-    return separate(path, analyze=False, loaded=loaded)
+    return separate(
+        path,
+        analyze=False,
+        loaded=loaded,
+        model_name=model_name,
+    )
 
 
 separate_checked = bind_zero_gpu(_separate_checked)
 
 
-def run_separation(upload):
+def run_separation(upload, model_mode="Fast"):
     """Validate and separate one upload. Returns the four WAV paths and a status.
 
     This is one return, not a stream. The original working page filled the
@@ -282,7 +294,11 @@ def run_separation(upload):
     if prepared[0] is None:
         return _idle(prepared[2])
     path, loaded, _error = prepared
-    paths, error = _finish_separation(path, loaded)
+    try:
+        model_name = model_name_for_mode(model_mode)
+    except ValueError as exc:
+        return _idle(str(exc))
+    paths, error = _finish_separation(path, loaded, model_name)
     if error:
         return _idle(error)
     return paths + ("",)
@@ -308,9 +324,9 @@ def _prepare_upload(upload):
     return path, loaded, None
 
 
-def _finish_separation(path: Path, loaded):
+def _finish_separation(path: Path, loaded, model_name="htdemucs"):
     try:
-        result = separate_checked(path, loaded)
+        result = separate_checked(path, loaded, model_name)
     except (SeparationError, OutputIntegrityError, DeviceError, AnalysisError) as exc:
         logging.getLogger("stem_ai.app").exception("Separation did not finish")
         return None, str(exc)
