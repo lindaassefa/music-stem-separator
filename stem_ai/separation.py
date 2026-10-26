@@ -108,6 +108,7 @@ def separate(
     *,
     analyze: bool = True,
     loaded: LoadedAudio | None = None,
+    model_name: str = MODEL_NAME,
 ) -> SeparationResult:
     """Separate one song with pretrained htdemucs.
 
@@ -120,6 +121,9 @@ def separate(
     ``apply_model``. WAV is decoded with soundfile and MP3 with miniaudio,
     so ffmpeg is not required.
     """
+
+    if model_name not in ("htdemucs", "htdemucs_ft"):
+        raise SeparationError(f"Unsupported model: {model_name}")
 
     decode_started = time.perf_counter()
     if loaded is None:
@@ -135,7 +139,7 @@ def separate(
         requested = select_device()
         try:
             model, separated, inference_seconds, waveform, stage_seconds = _separate_loaded(
-                loaded, requested
+                loaded, requested, model_name
             )
             device = requested
         except Exception as exc:
@@ -152,7 +156,7 @@ def separate(
             )
             try:
                 model, separated, inference_seconds, waveform, stage_seconds = _separate_loaded(
-                    loaded, "cpu"
+                    loaded, "cpu", model_name
                 )
             except Exception as cpu_exc:
                 raise SeparationError(
@@ -215,14 +219,19 @@ def separate(
         reconstruction_peak_absolute_error=residual.peak_absolute_error,
         measurements=measurements,
         analysis_error=analysis_error,
+        model_name=model_name,
     )
 
 
-def _separate_loaded(loaded: LoadedAudio, device: str):
+def _separate_loaded(
+    loaded: LoadedAudio,
+    device: str,
+    model_name: str = MODEL_NAME,
+):
     """Move htdemucs onto `device`, then time only the apply_model call."""
 
     load_started = time.perf_counter()
-    model = load_htdemucs()
+    model = load_htdemucs(model_name)
     model_load_seconds = time.perf_counter() - load_started
     # Weight loading happens in load_htdemucs. Moving the module is also kept
     # outside the timer so the reported time is the separation call itself.
@@ -252,10 +261,13 @@ def _parameter_device(model) -> str:
         return ""
 
 
-def load_htdemucs():
-    """Load the published htdemucs weights once per process."""
+def load_htdemucs(model_name: str = MODEL_NAME):
+    """Load and cache the requested pretrained Demucs model."""
 
-    cached = _MODEL.get(MODEL_NAME)
+    if model_name not in ("htdemucs", "htdemucs_ft"):
+        raise SeparationError(f"Unsupported model: {model_name}")
+
+    cached = _MODEL.get(model_name)
     if cached is not None:
         return cached
 
@@ -267,12 +279,14 @@ def load_htdemucs():
         ) from exc
 
     try:
-        model = get_model(MODEL_NAME)
+        model = get_model(model_name)
     except Exception as exc:
-        raise SeparationError(f"Could not load pretrained htdemucs: {_short_error(exc)}") from exc
+        raise SeparationError(
+            f"Could not load {model_name}: {_short_error(exc)}"
+        ) from exc
 
     model.eval()
-    _MODEL[MODEL_NAME] = model
+    _MODEL[model_name] = model
     return model
 
 
