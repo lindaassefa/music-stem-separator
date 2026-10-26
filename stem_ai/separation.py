@@ -350,7 +350,7 @@ def apply_htdemucs(
             device=device,
             shifts=shifts,
             split=True,
-            overlap=0.25,
+            overlap=0.0,
             progress=False,
             num_workers=0,
             segment=segment,

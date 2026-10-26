@@ -1,0 +1,167 @@
+{
+  "created_utc": "2026-10-26T19:25:01.431650+00:00",
+  "model": "htdemucs",
+  "device": "CPU",
+  "cpu_threads": 2,
+  "shifts": 0,
+  "split": true,
+  "segment_seconds": 7.8,
+  "sample_rate": 44100,
+  "dataset": "MUSDB18 7-second excerpts",
+  "short_excerpt_results": [
+    {
+      "track": "ANiMAL - Clinic A",
+      "overlap": 0.25,
+      "latency": 21.892233653999938,
+      "rtf": 3.219446125588226,
+      "drums": 5.6164748812643195,
+      "bass": 12.824267257342079,
+      "other": 2.363919650263065,
+      "vocals": 6.636024345115058,
+      "mean_sisdr": 6.86017153349613
+    },
+    {
+      "track": "ANiMAL - Clinic A",
+      "overlap": 0.0,
+      "latency": 11.420912467000107,
+      "rtf": 1.6795459510294275,
+      "drums": 5.611824710201995,
+      "bass": 12.822487389134098,
+      "other": 2.3315708665334474,
+      "vocals": 6.593022471268103,
+      "mean_sisdr": 6.839726359284411
+    },
+    {
+      "track": "ANiMAL - Easy Tiger",
+      "overlap": 0.25,
+      "latency": 22.74561666999989,
+      "rtf": 3.3449436279411606,
+      "drums": 7.7571259514185185,
+      "bass": 5.6534461671475835,
+      "other": 3.920218627497223,
+      "vocals": 7.028438339212709,
+      "mean_sisdr": 6.089807271319009
+    },
+    {
+      "track": "ANiMAL - Easy Tiger",
+      "overlap": 0.0,
+      "latency": 10.468334724000215,
+      "rtf": 1.539460988823561,
+      "drums": 7.738085846536253,
+      "bass": 5.657881287284935,
+      "other": 3.950928525463368,
+      "vocals": 7.045929151462033,
+      "mean_sisdr": 6.098206202686647
+    },
+    {
+      "track": "Actions - Devil's Words",
+      "overlap": 0.25,
+      "latency": 22.72520473900022,
+      "rtf": 3.3419418733823854,
+      "drums": 8.269000419607575,
+      "bass": 7.3054164826013865,
+      "other": 5.1574306457817745,
+      "vocals": 9.916013372888168,
+      "mean_sisdr": 7.661965230219726
+    },
+    {
+      "track": "Actions - Devil's Words",
+      "overlap": 0.0,
+      "latency": 11.474531782000213,
+      "rtf": 1.687431144411796,
+      "drums": 8.257396663949777,
+      "bass": 7.28801052686004,
+      "other": 5.162040671297071,
+      "vocals": 9.914957796870018,
+      "mean_sisdr": 7.655601414744227
+    }
+  ],
+  "long_audio_tracks": [
+    "ANiMAL - Clinic A",
+    "ANiMAL - Easy Tiger",
+    "Actions - Devil's Words"
+  ],
+  "long_audio_results": [
+    {
+      "overlap": 0.0,
+      "duration_seconds": 20.410340136054423,
+      "latency_seconds": 32.11169193099977,
+      "rtf": 1.5733050854098782,
+      "mean_sisdr_db": 6.961595151420492,
+      "drums_sisdr_db": 7.072434193835024,
+      "bass_sisdr_db": 8.569446210367227,
+      "other_sisdr_db": 3.499119933744142,
+      "vocals_sisdr_db": 8.705380267735574
+    },
+    {
+      "overlap": 0.1,
+      "duration_seconds": 20.410340136054423,
+      "latency_seconds": 33.80908261999957,
+      "rtf": 1.6564683584217472,
+      "mean_sisdr_db": 7.111841103242377,
+      "drums_sisdr_db": 7.150455527576738,
+      "bass_sisdr_db": 8.84918963729048,
+      "other_sisdr_db": 3.7355299035376897,
+      "vocals_sisdr_db": 8.712189344564603
+    },
+    {
+      "overlap": 0.25,
+      "duration_seconds": 20.410340136054423,
+      "latency_seconds": 43.60908211900005,
+      "rtf": 2.136617118005082,
+      "mean_sisdr_db": 7.383270941247408,
+      "drums_sisdr_db": 7.364014412276671,
+      "bass_sisdr_db": 9.258420354129138,
+      "other_sisdr_db": 4.139249908905046,
+      "vocals_sisdr_db": 8.771399089678773
+    }
+  ],
+  "limitations": [
+    "Short excerpt timings are mostly single measurements.",
+    "Long audio was constructed by concatenating three unrelated excerpts.",
+    "SI-SDR does not directly measure perceived audio quality.",
+    "Long-audio overlap settings have only one timed run each.",
+    "Track 0 (NightOwl) was evaluated earlier but is not included in evaluation_results.",
+    "Second long-audio validation also concatenates unrelated 6.8-second excerpts."
+  ],
+  "second_long_audio_tracks": [
+    "ANiMAL - Rockshow",
+    "Actions - One Minute Smile",
+    "Actions - South Of The Water"
+  ],
+  "second_long_audio_results": [
+    {
+      "overlap": 0.0,
+      "duration_seconds": 20.410340136054423,
+      "latency_seconds": 33.12417040799937,
+      "rtf": 1.6229112394597602,
+      "mean_sisdr_db": 6.9720234397733165,
+      "drums_sisdr_db": 7.658980763715858,
+      "bass_sisdr_db": 8.259132524484201,
+      "other_sisdr_db": 3.7305646323410127,
+      "vocals_sisdr_db": 8.239415838552196
+    },
+    {
+      "overlap": 0.1,
+      "duration_seconds": 20.410340136054423,
+      "latency_seconds": 33.13429345500026,
+      "rtf": 1.6234072158586546,
+      "mean_sisdr_db": 7.083924045597647,
+      "drums_sisdr_db": 7.76755243437594,
+      "bass_sisdr_db": 8.463068538216795,
+      "other_sisdr_db": 3.8762441953522613,
+      "vocals_sisdr_db": 8.228831014445593
+    },
+    {
+      "overlap": 0.25,
+      "duration_seconds": 20.410340136054423,
+      "latency_seconds": 44.458739955000055,
+      "rtf": 2.178245911564436,
+      "mean_sisdr_db": 7.104076646685846,
+      "drums_sisdr_db": 7.784296408429265,
+      "bass_sisdr_db": 8.461827157410513,
+      "other_sisdr_db": 3.933188931873544,
+      "vocals_sisdr_db": 8.236994089030063
+    }
+  ]
+}
