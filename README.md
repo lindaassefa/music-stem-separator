@@ -127,3 +127,27 @@ Python, PyTorch, Torchaudio, Demucs, Gradio, Docker, FFmpeg.
 This project uses the pretrained Hybrid Transformer Demucs model from Meta's [Demucs repository](https://github.com/facebookresearch/demucs).
 
 **Paper:** Rouard, Massa, and Défossez, *Hybrid Transformers for Music Source Separation* (ICASSP 2023).
+
+## CPU Performance Benchmark
+
+I benchmarked the pretrained HTDemucs model using a 10-second MP3 clip on CPU in a Docker container running in Google Cloud Shell.
+
+| Metric | Result |
+|---|---|
+| Audio duration | 10 seconds |
+| Sample rate | 44.1 kHz |
+| Timed runs | 3 |
+| Mean inference latency | 26.57 seconds |
+| Standard deviation | 0.14 seconds |
+| Mean real-time factor (RTF) | 2.66 |
+| Model loading time | 1.73 seconds |
+| Warm-up time | 50.03 seconds |
+| Process lifetime peak RSS | 1.65 GiB |
+
+For this benchmark, I used `shifts=0`, `overlap=0.25`, and `split=True`. Model loading, device transfer, and warm-up were measured separately from the timed inference runs.
+
+RTF is calculated as inference latency divided by audio duration. An RTF of 2.66 means processing took approximately 2.66 times the duration of the audio, so CPU inference was not real-time in this environment.
+
+The three runs were consistent, and the first and last runs produced identical outputs according to the benchmark's RMSE comparison. This measures repeatability, not separation quality.
+
+These measurements are specific to this CPU environment and test clip. I have not yet measured GPU performance or evaluated separation accuracy using ground-truth stems.
