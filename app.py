@@ -387,12 +387,12 @@ def main() -> None:
         # ZeroGPU's CUDA emulation accepts this placement before any visitor
         # request. The real GPU is held only inside the reserved call.
         load_htdemucs().cuda()
-    port = int(os.environ.get("PORT" if on_space else "STEM_PORT", "7860"))
+    port = int(os.environ.get("PORT", os.environ.get("STEM_PORT", "7860")))
     css_path = Path(__file__).resolve().parent / "stem_ai" / "dashboard.css"
     policy = serving_policy(output_dir)
     demo.queue(default_concurrency_limit=1, max_size=policy["max_size"])
     demo.launch(
-        server_name="0.0.0.0" if on_space else "127.0.0.1",
+        server_name="0.0.0.0" if on_space or os.environ.get("K_SERVICE") else "127.0.0.1",
         server_port=port,
         inbrowser=False,
         share=policy["share"],
