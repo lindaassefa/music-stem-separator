@@ -31,3 +31,7 @@ weights/
 
 # OS files
 .DS_Store
+
+# Local audio recordings and generated stems
+demo/
+demo-stems/
