@@ -64,7 +64,7 @@ I've been exploring how audio can be represented in the time and frequency domai
 
 I'm also learning about **SI-SDR (Scale-Invariant Signal-to-Distortion Ratio)**, which can be used to evaluate source separation when the original individual tracks are available.
 
-I haven't completed a proper SI-SDR evaluation on a reference dataset yet, so I'm not reporting any separation quality scores.
+I evaluated pretrained HTDemucs on selected MUSDB18 excerpts using SI-SDR. The results and limitations are documented in the SI-SDR Evaluation section below.
 
 ## Running the Project
 
@@ -150,4 +150,20 @@ RTF is calculated as inference latency divided by audio duration. An RTF of 2.66
 
 The three runs were consistent, and the first and last runs produced identical outputs according to the benchmark's RMSE comparison. This measures repeatability, not separation quality.
 
-These measurements are specific to this CPU environment and test clip. I have not yet measured GPU performance or evaluated separation accuracy using ground-truth stems.
+These measurements are specific to this CPU environment and test clip. I have not yet completed a controlled GPU benchmark. My separate SI-SDR experiments evaluate separation quality using reference stems.
+
+## SI-SDR Evaluation
+
+I also evaluated pretrained HTDemucs on selected MUSDB18 excerpts using SI-SDR (Scale-Invariant Signal-to-Distortion Ratio). Unlike the CPU latency benchmark, this evaluation compares separated audio with reference stems.
+
+For one approximately 20.4-second evaluation, I tested different overlap settings:
+
+| Overlap | Mean SI-SDR | Real-time factor |
+|---|---|---|
+| 0.00 | 6.96 dB | 1.57 |
+| 0.10 | 7.11 dB | 1.66 |
+| 0.25 | 7.38 dB | 2.14 |
+
+In this test, increasing overlap improved SI-SDR but also increased processing time. I saved additional validation results in `benchmark_results/`.
+
+These were small exploratory experiments rather than a full MUSDB18 benchmark. The results describe the performance of pretrained HTDemucs, not a model I trained.

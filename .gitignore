@@ -35,3 +35,7 @@ weights/
 # Local audio recordings and generated stems
 demo/
 demo-stems/
+
+# Local krar research audio and generated outputs
+data/krar/
+*.zip
